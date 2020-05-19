@@ -46,17 +46,18 @@ public class EurekaConfigBasedInstanceInfoProvider implements Provider<InstanceI
     public synchronized InstanceInfo get() {
         if (instanceInfo == null) {
             // Build the lease information to be passed to the server based on config
+            // 创建 租约信息构建器，并设置属性
             LeaseInfo.Builder leaseInfoBuilder = LeaseInfo.Builder.newBuilder()
                     .setRenewalIntervalInSecs(config.getLeaseRenewalIntervalInSeconds())
                     .setDurationInSecs(config.getLeaseExpirationDurationInSeconds());
-
+            // 创建 VIP地址解析器
             if (vipAddressResolver == null) {
                 vipAddressResolver = new Archaius1VipAddressResolver();
             }
-
+            // 创建 应用实例信息构建器
             // Builder the instance information to be registered with eureka server
             InstanceInfo.Builder builder = InstanceInfo.Builder.newBuilder(vipAddressResolver);
-
+            // 应用实例编号
             // set the appropriate id for the InstanceInfo, falling back to datacenter Id if applicable, else hostname
             String instanceId = config.getInstanceId();
             if (instanceId == null || instanceId.isEmpty()) {
@@ -67,7 +68,7 @@ public class EurekaConfigBasedInstanceInfoProvider implements Provider<InstanceI
                     instanceId = config.getHostName(false);
                 }
             }
-
+            // 获得 主机名
             String defaultAddress;
             if (config instanceof RefreshableInstanceConfig) {
                 // Refresh AWS data center info, and return up to date address
@@ -80,7 +81,7 @@ public class EurekaConfigBasedInstanceInfoProvider implements Provider<InstanceI
             if (defaultAddress == null || defaultAddress.isEmpty()) {
                 defaultAddress = config.getIpAddress();
             }
-
+            // 设置 应用实例信息构建器 的 属性
             builder.setNamespace(config.getNamespace())
                     .setInstanceId(instanceId)
                     .setAppName(config.getAppname())
@@ -100,7 +101,7 @@ public class EurekaConfigBasedInstanceInfoProvider implements Provider<InstanceI
                     .setHealthCheckUrls(config.getHealthCheckUrlPath(),
                             config.getHealthCheckUrl(), config.getSecureHealthCheckUrl());
 
-
+            // 应用初始化后是否开启
             // Start off with the STARTING state to avoid traffic
             if (!config.isInstanceEnabledOnit()) {
                 InstanceStatus initialStatus = InstanceStatus.STARTING;
@@ -111,7 +112,7 @@ public class EurekaConfigBasedInstanceInfoProvider implements Provider<InstanceI
                          + "itself as available. You would instead want to control this via a healthcheck handler.",
                          InstanceStatus.UP);
             }
-
+            // 设置 应用实例信息构建器 的 元数据( Metadata )集合
             // Add any user-specific metadata information
             for (Map.Entry<String, String> mapEntry : config.getMetadataMap().entrySet()) {
                 String key = mapEntry.getKey();
@@ -121,8 +122,10 @@ public class EurekaConfigBasedInstanceInfoProvider implements Provider<InstanceI
                     builder.add(key, value);
                 }
             }
-
+            // 创建 应用实例信息
+            System.out.println("【创建 应用实例信息instanceInfo】");
             instanceInfo = builder.build();
+            // 设置 应用实例信息 的 租约信息
             instanceInfo.setLeaseInfo(leaseInfoBuilder.build());
         }
         return instanceInfo;

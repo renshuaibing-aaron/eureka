@@ -1,19 +1,3 @@
-/*
- * Copyright 2014 Netflix, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.netflix.eureka;
 
 import javax.inject.Inject;
@@ -42,6 +26,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ *
+ * Eureka-Server 限流过滤器。使用 RateLimiting ，保证 Eureka-Server 稳定性。
  * Rate limiting filter, with configurable threshold above which non-privileged clients
  * will be dropped. This feature enables cutting off non-standard and potentially harmful clients
  * in case of system overload. Since it is critical to always allow client registrations and heartbeats into
@@ -129,16 +115,22 @@ public class RateLimitingFilter implements Filter {
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+        //// 获得 Target RateLimitingFilter 只对符合正在表达式 ^.*/apps(/[^/]*)?$ 的接口做限流，其中不包含 Eureka-Server 集群批量同步接口
         Target target = getTarget(request);
+
+        // Other Target ，不做限流
         if (target == Target.Other) {
             chain.doFilter(request, response);
             return;
         }
 
         HttpServletRequest httpRequest = (HttpServletRequest) request;
-
+        // 判断是否被限流
         if (isRateLimited(httpRequest, target)) {
+
+            // TODO[0012]：监控相关，跳过
             incrementStats(target);
+            // 如果开启限流，返回 503 状态码
             if (serverConfig.isRateLimiterEnabled()) {
                 ((HttpServletResponse) response).setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
                 return;
@@ -173,10 +165,13 @@ public class RateLimitingFilter implements Filter {
     }
 
     private boolean isRateLimited(HttpServletRequest request, Target target) {
+
+        // 判断是否特权应用
         if (isPrivileged(request)) {
             logger.debug("Privileged {} request", target);
             return false;
         }
+        // 判断是否被超载( 限流 )
         if (isOverloaded(target)) {
             logger.debug("Overloaded {} request; discarding it", target);
             return true;
@@ -186,9 +181,11 @@ public class RateLimitingFilter implements Filter {
     }
 
     private boolean isPrivileged(HttpServletRequest request) {
+        // 是否对标准客户端开启限流
         if (serverConfig.isRateLimiterThrottleStandardClients()) {
             return false;
         }
+        // 以请求头( "DiscoveryIdentity-Name" ) 判断是否在标准客户端名集合内
         Set<String> privilegedClients = serverConfig.getRateLimiterPrivilegedClients();
         String clientName = request.getHeader(AbstractEurekaIdentity.AUTH_NAME_HEADER_KEY);
         return privilegedClients.contains(clientName) || DEFAULT_PRIVILEGED_CLIENTS.contains(clientName);

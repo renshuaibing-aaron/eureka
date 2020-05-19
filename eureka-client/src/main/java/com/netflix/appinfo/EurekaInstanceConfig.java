@@ -1,18 +1,3 @@
-/*
- * Copyright 2012 Netflix, Inc.
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
 package com.netflix.appinfo;
 
 import java.util.Map;
@@ -108,6 +93,8 @@ public interface EurekaInstanceConfig {
     boolean getSecurePortEnabled();
 
     /**
+     * 租约续约频率，单位：秒。应用不断通过按照该频率发送心跳给 Eureka-Server 以达到续约的作用。
+     * 当 Eureka-Server 超过最大频率未收到续约（心跳），契约失效，进行应用移除。应用移除后，其他应用无法从 Eureka-Server 获取该应用
      * Indicates how often (in seconds) the eureka client needs to send
      * heartbeats to eureka server to indicate that it is still alive. If the
      * heartbeats are not received for the period specified in
@@ -128,7 +115,7 @@ public interface EurekaInstanceConfig {
      * Indicates the time in seconds that the eureka server waits since it
      * received the last heartbeat before it can remove this instance from its
      * view and there by disallowing traffic to this instance.
-     *
+     *契约过期时间，单位：秒
      * <p>
      * Setting this value too long could mean that the traffic could be routed
      * to the instance even though the instance is not alive. Setting this value
@@ -203,6 +190,7 @@ public interface EurekaInstanceConfig {
     Map<String, String> getMetadataMap();
 
     /**
+     * 数据中心信息。com.netflix.appinfo.DataCenterInfo，数据中心信息接口，目前较为简单，标记所属数据中心名。一般情况下，我们使用 Name.MyOwn
      * Returns the data center this instance is deployed. This information is
      * used to get some AWS specific instance information if the instance is
      * deployed in AWS.
@@ -368,6 +356,11 @@ public interface EurekaInstanceConfig {
     String[] getDefaultAddressResolutionOrder();
 
     /**
+     * 配置命名空间，默认使用 eureka。以 eureka-client.properties
+     * eureka.name=eureka
+     * eureka.port=8080
+     * eureka.vipAddress=eureka.mydomain.net
+     * 每个属性最前面的 eureka 即是配置命名空间，一般情况无需修改
      * Get the namespace used to find properties.
      * @return the namespace used to find properties.
      */

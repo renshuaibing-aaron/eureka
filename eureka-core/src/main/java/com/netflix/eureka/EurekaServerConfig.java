@@ -1,19 +1,3 @@
-/*
- * Copyright 2012 Netflix, Inc.
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
-
 package com.netflix.eureka;
 
 import java.util.Map;
@@ -601,40 +585,47 @@ public interface EurekaServerConfig {
     String getMyUrl();
 
     /**
+     * 打印访问的客户端名和版本号，配合 Netflix Servo 实现监控信息采集
      * Indicates whether the eureka server should log/metric clientAuthHeaders
      * @return {@code true} if the clientAuthHeaders should be logged and/or emitted as metrics
      */
     boolean shouldLogIdentityHeaders();
 
     /**
+     *请求限流相关 请求限流是否开启
      * Indicates whether the rate limiter should be enabled or disabled.
      */
     boolean isRateLimiterEnabled();
 
     /**
+     * 是否对标准客户端判断是否限流。标准客户端通过请求头( header )的 "DiscoveryIdentity-Name" 来判断，是否在标准客户端名集合里
      * Indicate if rate limit standard clients. If set to false, only non standard clients
      * will be rate limited.
      */
     boolean isRateLimiterThrottleStandardClients();
 
     /**
+     * 标准客户端名集合。默认包含"DefaultClient" 和 "DefaultServer"
      * A list of certified clients. This is in addition to standard eureka Java clients.
      */
     Set<String> getRateLimiterPrivilegedClients();
 
     /**
+     * 速率限制的 burst size ，使用令牌桶算法
      * Rate limiter, token bucket algorithm property. See also {@link #getRateLimiterRegistryFetchAverageRate()}
      * and {@link #getRateLimiterFullFetchAverageRate()}.
      */
     int getRateLimiterBurstSize();
 
     /**
+     * 增量拉取注册信息的速率限制
      * Rate limiter, token bucket algorithm property. Specifies the average enforced request rate.
      * See also {@link #getRateLimiterBurstSize()}.
      */
     int getRateLimiterRegistryFetchAverageRate();
 
     /**
+     * 全量拉取注册信息的速率限制
      * Rate limiter, token bucket algorithm property. Specifies the average enforced request rate.
      * See also {@link #getRateLimiterBurstSize()}.
      */

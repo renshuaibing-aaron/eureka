@@ -15,6 +15,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ *
+ * Eureka-Client 应用实例复制器
  * A task for updating and replicating the local instanceinfo to the remote server. Properties of this task are:
  * - configured with a single update thread to guarantee sequential update to the remote server
  * - update tasks can be scheduled on-demand via onDemandUpdate()
@@ -29,15 +31,39 @@ class InstanceInfoReplicator implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(InstanceInfoReplicator.class);
 
     private final DiscoveryClient discoveryClient;
+    /**
+     * 应用实例信息
+     */
     private final InstanceInfo instanceInfo;
-
+    /**
+     * 定时执行频率，单位：秒
+     */
     private final int replicationIntervalSeconds;
+    /**
+     * 定时执行器
+     */
     private final ScheduledExecutorService scheduler;
+    /**
+     * 定时执行任务的 Future
+     */
     private final AtomicReference<Future> scheduledPeriodicRef;
-
+    /**
+     * 是否开启调度
+     */
     private final AtomicBoolean started;
+
+    /**
+     * RateLimiter
+     */
     private final RateLimiter rateLimiter;
+
+    /**
+     * 令牌桶上限，默认：2
+     */
     private final int burstSize;
+    /**
+     * 令牌再装平均速率，默认：60 * 2 / 30 = 4
+     */
     private final int allowedRatePerMinute;
 
     InstanceInfoReplicator(DiscoveryClient discoveryClient, InstanceInfo instanceInfo, int replicationIntervalSeconds, int burstSize) {
@@ -61,9 +87,14 @@ class InstanceInfoReplicator implements Runnable {
     }
 
     public void start(int initialDelayMs) {
+
         if (started.compareAndSet(false, true)) {
+            // 设置 应用实例信息 数据不一致
             instanceInfo.setIsDirty();  // for initial register
+            // 提交任务，并设置该任务的 Future
+            //延迟 initialDelayMs 毫秒执行一次任务
             Future next = scheduler.schedule(this, initialDelayMs, TimeUnit.SECONDS);
+
             scheduledPeriodicRef.set(next);
         }
     }
@@ -84,20 +115,25 @@ class InstanceInfoReplicator implements Runnable {
         }
     }
 
+    //应用实例状态发生变化时，调用 #onDemandUpdate() 方法，向 Eureka-Server 发起注册，同步应用实例信息。
+    // InstanceInfoReplicator 使用 RateLimiter ，避免状态频繁发生变化，向 Eureka-Server 频繁同步
     public boolean onDemandUpdate() {
-        if (rateLimiter.acquire(burstSize, allowedRatePerMinute)) {
+
+        //若获取成功，向 Eureka-Server 发起注册，同步应用实例信息。
+        //若获取失败，不向 Eureka-Server 发起注册，同步应用实例信息
+        if (rateLimiter.acquire(burstSize, allowedRatePerMinute)) { // 限流
             if (!scheduler.isShutdown()) {
                 scheduler.submit(new Runnable() {
                     @Override
                     public void run() {
                         logger.debug("Executing on-demand update of local InstanceInfo");
-    
+                        // 取消任务 避免无用的注册
                         Future latestPeriodic = scheduledPeriodicRef.get();
                         if (latestPeriodic != null && !latestPeriodic.isDone()) {
                             logger.debug("Canceling the latest scheduled update, it will be rescheduled at the end of on demand update");
                             latestPeriodic.cancel(false);
                         }
-    
+                        // 再次调用
                         InstanceInfoReplicator.this.run();
                     }
                 });
@@ -112,18 +148,26 @@ class InstanceInfoReplicator implements Runnable {
         }
     }
 
+    //定时检查 InstanceInfo 的状态( status ) 属性是否发生变化。若是，发起注册
+    @Override
     public void run() {
-        try {
-            discoveryClient.refreshInstanceInfo();
 
+        try {
+            // 刷新 应用实例信息
+            discoveryClient.refreshInstanceInfo();
+            // 判断 应用实例信息 是否数据不一致
             Long dirtyTimestamp = instanceInfo.isDirtyWithTime();
             if (dirtyTimestamp != null) {
+                // 发起注册
                 discoveryClient.register();
+                // 设置 应用实例信息 数据一致
                 instanceInfo.unsetIsDirty(dirtyTimestamp);
             }
         } catch (Throwable t) {
             logger.warn("There was a problem with the instance info replicator", t);
         } finally {
+            // 提交任务，并设置该任务的 Future
+            //再次延迟执行任务，并设置 scheduledPeriodicRef。通过这样的方式，不断循环定时执行任务
             Future next = scheduler.schedule(this, replicationIntervalSeconds, TimeUnit.SECONDS);
             scheduledPeriodicRef.set(next);
         }

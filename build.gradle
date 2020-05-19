@@ -1,5 +1,12 @@
 buildscript {
-    repositories { jcenter() }
+    repositories {
+       // jcenter()
+        //
+        maven {
+            name "aliyunmaven"
+            url "http://maven.aliyun.com/nexus/content/groups/public/"
+        }
+        }
 
     dependencies {
         classpath 'com.netflix.nebula:gradle-extra-configurations-plugin:2.2.+'
@@ -61,7 +68,11 @@ subprojects {
     targetCompatibility = 1.8
 
     repositories {
-        jcenter()
+        //jcenter()
+        maven {
+            name "aliyunmaven"
+            url "http://maven.aliyun.com/nexus/content/groups/public/"
+        }
     }
 
     test {

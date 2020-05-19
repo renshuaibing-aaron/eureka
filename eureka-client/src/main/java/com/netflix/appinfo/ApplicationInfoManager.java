@@ -1,19 +1,3 @@
-/*
- * Copyright 2012 Netflix, Inc.
- *f
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
-
 package com.netflix.appinfo;
 
 import javax.inject.Inject;
@@ -54,13 +38,25 @@ public class ApplicationInfoManager {
             return prev;
         }
     };
-
+    /**
+     * 单例
+     */
     private static ApplicationInfoManager instance = new ApplicationInfoManager(null, null, null);
-
+    /**
+     * 状态变更监听器
+     */
     protected final Map<String, StatusChangeListener> listeners;
+    /**
+     * 应用实例状态匹配
+     */
     private final InstanceStatusMapper instanceStatusMapper;
-
+    /**
+     * 应用实例信息
+     */
     private InstanceInfo instanceInfo;
+    /**
+     * 应用实例配置
+     */
     private EurekaInstanceConfig config;
 
     public static class OptionalArgs {
@@ -158,6 +154,7 @@ public class ApplicationInfoManager {
     }
 
     /**
+     * 设置应用实例信息的状态，从而通知 InstanceInfoReplicator#onDemandUpdate() 方法的调用
      * Set the status of this instance. Application can use this to indicate
      * whether it is ready to receive traffic. Setting the status here also notifies all registered listeners
      * of a status change event.
@@ -182,6 +179,10 @@ public class ApplicationInfoManager {
         }
     }
 
+    /**
+     * 注册应用实例状态变更监听器
+     * @param listener
+     */
     public void registerStatusChangeListener(StatusChangeListener listener) {
         listeners.put(listener.getId(), listener);
     }
@@ -194,10 +195,12 @@ public class ApplicationInfoManager {
      * Refetches the hostname to check if it has changed. If it has, the entire
      * <code>DataCenterInfo</code> is refetched and passed on to the eureka
      * server on next heartbeat.
-     *
+     *刷新数据中心相关信息
      * see {@link InstanceInfo#getHostName()} for explanation on why the hostname is used as the default address
      */
     public void refreshDataCenterInfoIfRequired() {
+
+        //关注应用实例信息的 hostName 、 ipAddr 、 dataCenterInfo 属性的变化
         String existingAddress = instanceInfo.getHostName();
 
         String existingSpotInstanceAction = null;
@@ -246,13 +249,15 @@ public class ApplicationInfoManager {
     }
 
     public void refreshLeaseInfoIfRequired() {
+        //关注应用实例信息的 renewalIntervalInSecs 、 durationInSecs 属性的变化
         LeaseInfo leaseInfo = instanceInfo.getLeaseInfo();
         if (leaseInfo == null) {
             return;
         }
         int currentLeaseDuration = config.getLeaseExpirationDurationInSeconds();
         int currentLeaseRenewal = config.getLeaseRenewalIntervalInSeconds();
-        if (leaseInfo.getDurationInSecs() != currentLeaseDuration || leaseInfo.getRenewalIntervalInSecs() != currentLeaseRenewal) {
+        if (leaseInfo.getDurationInSecs() != currentLeaseDuration  // 租约过期时间 改变
+                || leaseInfo.getRenewalIntervalInSecs() != currentLeaseRenewal) { // 租约续约频率 改变
             LeaseInfo newLeaseInfo = LeaseInfo.Builder.newBuilder()
                     .setRenewalIntervalInSecs(currentLeaseRenewal)
                     .setDurationInSecs(currentLeaseDuration)
@@ -262,6 +267,9 @@ public class ApplicationInfoManager {
         }
     }
 
+    /**
+     * 内部类，监听应用实例信息状态的变更
+     */
     public static interface StatusChangeListener {
         String getId();
 

@@ -1,19 +1,3 @@
-/*
- * Copyright 2012 Netflix, Inc.
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
-
 package com.netflix.eureka.lease;
 
 import com.netflix.eureka.registry.AbstractInstanceRegistry;
@@ -37,13 +21,33 @@ public class Lease<T> {
     };
 
     public static final int DEFAULT_DURATION_IN_SECS = 90;
-
+    /**
+     * 实体 租约的持有者。在 Eureka-Server 里，暂时只有 InstanceInfo 使用
+     */
     private T holder;
+
+    /**
+     * 取消注册时间戳 租约过期时间戳
+     */
     private long evictionTimestamp;
+    /**
+     * 注册时间戳 注册( 创建 )租约时间戳。在构造方法里可以看租约对象的创建时间戳即为注册租约时间戳
+     */
     private long registrationTimestamp;
+
+    /**
+     * 开始服务时间戳 开始服务时间戳。注册应用实例信息会使用到它如下两个方法
+     */
     private long serviceUpTimestamp;
+    /**
+     * 最后更新时间戳  最后更新租约时间戳。每次续租时，更新该时间戳
+     */
     // Make it volatile so that the expiration task would see this quicker
     private volatile long lastUpdateTimestamp;
+    /**
+     * 租约持续时长，单位：毫秒
+     * 租约持续时间，单位：毫秒。当租约过久未续租，即当前时间 - lastUpdatedTimestamp > duration 时，租约过期
+     */
     private long duration;
 
     public Lease(T r, int durationInSecs) {

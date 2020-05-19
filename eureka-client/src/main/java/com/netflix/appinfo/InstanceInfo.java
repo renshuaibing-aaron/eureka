@@ -1,18 +1,3 @@
-/*
- * Copyright 2012 Netflix, Inc.
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
 package com.netflix.appinfo;
 
 import java.util.Collections;
@@ -42,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * ureka-Client 向 Eureka-Server 注册该对象信息。注册成功后，可以被其他 Eureka-Client 发现
  * The class that holds information required for registration with
  * <tt>Eureka Server</tt> and to be discovered by other components.
  * <p>
@@ -1169,6 +1155,7 @@ public class InstanceInfo {
         if (this.status != status) {
             InstanceStatus prev = this.status;
             this.status = status;
+            // 设置 应用实例信息 数据一致
             setIsDirty();
             return prev;
         }
@@ -1242,6 +1229,7 @@ public class InstanceInfo {
      * the discovery server on the next heartbeat.
      */
     public synchronized void setIsDirty() {
+        //因为 InstanceInfo 刚被创建时，在 Eureka-Server 不存在，也会被注册
         isInstanceInfoDirty = true;
         lastDirtyTimestamp = System.currentTimeMillis();
     }
